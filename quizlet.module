@@ -98,6 +98,26 @@ function quizlet_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'quizlet.module',
   );
+  $items['node/%node/learn'] = array(
+    'title' => t('Learn'),
+    'description' => t('Learn page'),
+    'page callback' => 'quizlet_terms_embeddedcards',
+    'page arguments' => array(1, 2),
+    'access callback' => 'quizlet_flashcards_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'quizlet.module',
+  );
+  $items['node/%node/scatter'] = array(
+    'title' => t('Scatter'),
+    'description' => t('Scatter page'),
+    'page callback' => 'quizlet_terms_embeddedcards',
+    'page arguments' => array(1, 2),
+    'access callback' => 'quizlet_flashcards_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'quizlet.module',
+  );
   return $items; 
 } 
 /**
@@ -419,7 +439,7 @@ function quizlet_view($node, $teaser = FALSE, $page = FALSE, $block = FALSE) {
   }
   $output = theme('table', $header, $rows); 
   $node->content['quizlet_data'] = array(
-    '#value' => '<div class="quizet_list"><div class="quizlet_terms_title"><b>'. t('Terms') .' : </b><a href="javascript:void(0);" id="quizlet_images">Hide Images</a></div>' . $output .'</div>'. quizlet_powered_by(), 
+    '#value' => '<div class="quizet_list"><div class="quizlet_terms_title"><b>'. t('Terms') .' : </b><a href="javascript:void(0);" id="quizlet_images">Hide Images</a></div>' . $output .'</div>'. drupal_get_form('quizlet_selection_cards', $node) . quizlet_powered_by(), 
     '#weight' => 3,
   );
   return $node;
@@ -535,4 +555,33 @@ function quizlet_flashcards_access($node) {
 */
 function quizlet_terms_flashcards($node) {
   return theme_render_template(drupal_get_path('module', 'quizlet') .'/templates/flashcards.tpl.php', array('node' => $node));
+}
+/**
+* Quizlet embedded charts
+* 
+* @param mixed $node
+* @param mixed $type
+*/
+function quizlet_terms_embeddedcards($node, $type) {
+  if ($type=='learn') {
+    $url = 'http://quizlet.com/'. $node->quizlet_id .'/learn/embed/?hideLinks';  
+    $height = 480;
+  }
+  else {
+    $url = 'http://quizlet.com/'. $node->quizlet_id .'/scatter/embed/?hideLinks';  
+    $height = 520; 
+  }
+  return theme_render_template(drupal_get_path('module', 'quizlet') .'/templates/embedded_cards.tpl.php', array('url' => $url, 'height' => $height));
+}
+function quizlet_selection_cards($form_state = array(), $node) {
+  $flashcard = url('node/'. $node->nid .'/flashcards', array('absolute' => TRUE));
+  $learn = url('node/'. $node->nid .'/learn', array('absolute' => TRUE));
+  $scatter = url('node/'. $node->nid .'/scatter', array('absolute' => TRUE));
+  $options = array('' => t('Please select'), $flashcard => t('Flashcard'), $learn => t('Learn'), $scatter => t('Scatter'));
+  $form['select_card'] = array(
+    '#type' => 'select', 
+    '#title' => t('Select card'),
+    '#options' => $options,
+  );
+  return $form;
 }

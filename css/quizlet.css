@@ -114,3 +114,9 @@
   height:8px;
   float:left;
 }
+#edit-select-card-wrapper {
+  text-align:right;
+}
+#edit-select-card-wrapper label {
+  display:inline;
+}

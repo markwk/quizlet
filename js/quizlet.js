@@ -1,4 +1,9 @@
 $(document).ready(function() {
+  $('#edit-select-card').change(function() {
+    if ($(this).val()) {
+      window.location = $(this).val();
+    }
+  });
   $('.flashcard_sidea').attr('checked', false);  
   $('.flashcard_sideb').attr('checked', false);
   $('.flashcard_bothside').attr('checked', true)
