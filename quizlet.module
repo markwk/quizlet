@@ -163,7 +163,7 @@ function quizlet_api_form($form_state = array()) {
 * 
 * @param mixed $form_state
 */
-function quizlet_search_form($form_state = array()) {
+function quizlet_search_form($form_state = array(), $page=1) {
   global $user;
   $key = variable_get('quizlet_api_key', '');
   $keywords = $_GET['keywords'];
@@ -195,6 +195,7 @@ function quizlet_search_form($form_state = array()) {
     '#required' => TRUE,
     '#default_value' => $form_state['storage']['keywords'],
     '#description' => t('Enter keyword to search on quizlet.'),
+    '#size' => ($page ? 60 : 25),
   );
   $form['has_images'] = array(
     '#type' => 'checkbox',
@@ -262,11 +263,14 @@ function quizlet_search_form($form_state = array()) {
     $output = t('No results found.');  
   }
   $output .= quizlet_powered_by(); 
-  $form['data'] = array(
-    '#type' => 'item',
-    '#value' => $output
-  );
+  if ($page) {
+    $form['data'] = array(
+      '#type' => 'item',
+      '#value' => $output
+    );
+  }
   $form['#method'] = 'GET';
+  $form['#action'] = url('quizlet/search');
   return $form;
 }
 function quizlet_search_form_submit($form, &$form_state) {
@@ -584,4 +588,31 @@ function quizlet_selection_cards($form_state = array(), $node) {
     '#options' => $options,
   );
   return $form;
+}
+/**
+* Implementation of hook_block() Keyword Search Block
+* 
+* @param mixed $op
+* @param mixed $delta
+* @param mixed $edit
+*/
+function quizlet_block($op = 'list', $delta = 0, $edit = array()) {
+  if ($op == 'list') {
+    $blocks[0] = array(
+      'info' => t('Keyword Search'), 
+      'cache' => BLOCK_CACHE_PER_ROLE | BLOCK_CACHE_PER_PAGE, 
+    );
+    return $blocks;
+  }
+  else if ($op == 'view') {
+    switch ($delta) {
+      case 0:
+        $block = array(
+          'subject' => t('Keyword Search'), 
+          'content' => drupal_get_form('quizlet_search_form', 0),
+        );
+        break;
+    }
+    return $block;
+  }
 }
