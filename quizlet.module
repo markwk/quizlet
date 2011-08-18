@@ -191,7 +191,7 @@ function quizlet_search_form($form_state = array(), $page=1) {
   if ($sort) {
     $criteria .= '&sort='. $sort; 
   }
-  $url = 'http://api.quizlet.com/1.0/sets?dev_key='. $key .'&q='. str_replace(' ', '+', $keywords) .'&whitespace=on'. $criteria;
+  $url = 'http://api.quizlet.com/1.0/sets?dev_key='. $key .'&q='. str_replace(' ', '+', $keywords) .'&whitespace=off'. $criteria;
   if (!$response = json_decode(quizlet_api_request($url, array()), TRUE)) {
     drupal_set_message(t("Cannot communicate to server. Please try again."), 'error');
   }
@@ -289,7 +289,7 @@ function quizlet_search_form_submit($form, &$form_state) {
   $key = variable_get('quizlet_api_key', '');
   $keywords = $form_state['values']['keywords'];
   $has_images = $_GET['has_images'] ? TRUE : FALSE;
-  $url = 'http://api.quizlet.com/1.0/sets?dev_key='. $key .'&q='. str_replace(' ', '+', $keywords) .'&whitespace=on';
+  $url = 'http://api.quizlet.com/1.0/sets?dev_key='. $key .'&q='. str_replace(' ', '+', $keywords) .'&whitespace=off';
   if (!$response = json_decode(quizlet_api_request($url, array()), TRUE)) {
     drupal_set_message(t("Cannot communicate to server"), 'error');
   }
@@ -324,7 +324,7 @@ function quizlet_term_lists($id) {
     $criteria .= '&sort='. $_GET['sort']; 
   }
   $key = variable_get('quizlet_api_key', ''); 
-  $url = 'http://api.quizlet.com/1.0/sets?dev_key='. $key .'&&q=ids:'. $id .'&extended=on&whitespace=on';
+  $url = 'http://api.quizlet.com/1.0/sets?dev_key='. $key .'&&q=ids:'. $id .'&extended=on&whitespace=off';
   $backlink = l(t('Back to search results'), 'quizlet/search', array('query' => 'keywords='. $_GET['keywords'] . $criteria));
   $nid = db_result(db_query("select nid from {quizlet_lists} where quizlet_id='%d'", $id));       
   $savelink = l(($nid ? t('Update this list') : t('Save this list')), 'quizlet/save/'. $id, array('query' => 'keywords='. $_GET['keywords'] . $criteria));
@@ -478,7 +478,7 @@ function quizlet_terms_save($id) {
     $criteria .= '&sort='. $_GET['sort']; 
   }
   $key = variable_get('quizlet_api_key', ''); 
-  $url = 'http://api.quizlet.com/1.0/sets?dev_key='. $key .'&&q=ids:'. $id .'&extended=on&whitespace=on';
+  $url = 'http://api.quizlet.com/1.0/sets?dev_key='. $key .'&&q=ids:'. $id .'&extended=on&whitespace=off';
   if (!$response = json_decode(quizlet_api_request($url, array()), TRUE)) {
     drupal_set_message(t("Cannot communicate with server"), 'error');
     drupal_goto('quizlet/search', 'keywords='. $_GET['keywords'] . $criteria);
