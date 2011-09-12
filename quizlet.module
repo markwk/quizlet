@@ -193,7 +193,7 @@ function quizlet_search_form($form_state = array(), $page=1) {
   }
   $url = 'http://api.quizlet.com/1.0/sets?dev_key='. $key .'&q='. str_replace(' ', '+', $keywords) .'&whitespace=off'. $criteria;
   if (!$response = json_decode(quizlet_api_request($url, array()), TRUE)) {
-    drupal_set_message(t("Cannot communicate to server. Please try again."), 'error');
+    drupal_set_message(t("Cannot communicate to server. Please try again."), 'warning');
   }
   else {
     $form_state['storage']['data'] = $response['sets'];
@@ -615,7 +615,7 @@ function quizlet_selection_cards($form_state = array(), $node) {
 function quizlet_block($op = 'list', $delta = 0, $edit = array()) {
   if ($op == 'list') {
     $blocks[0] = array(
-      'info' => t('Keyword Search'), 
+      'info' => t('Search Vocabulary Lists by Keyword'), 
       'cache' => BLOCK_CACHE_PER_ROLE | BLOCK_CACHE_PER_PAGE, 
     );
     return $blocks;
@@ -624,7 +624,7 @@ function quizlet_block($op = 'list', $delta = 0, $edit = array()) {
     switch ($delta) {
       case 0:
         $block = array(
-          'subject' => t('Keyword Search'), 
+          'subject' => t('Keyword Search for Vocabulary Lists'), 
           'content' => drupal_get_form('quizlet_search_form', 0),
         );
         break;
