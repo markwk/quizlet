@@ -1,4 +1,3 @@
-; $Id: quizlet.info $
 name = Quizlet
 description = Quizlet management module.
 package = Custom

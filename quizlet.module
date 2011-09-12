@@ -10,6 +10,9 @@
 function quizlet_init() {
   drupal_add_css(drupal_get_path('module', 'quizlet') .'/css/quizlet.css'); 
   drupal_add_js(drupal_get_path('module', 'quizlet') .'/js/quizlet.js'); 
+  if (arg(0) == 'node' && arg(1) == 'add' && arg(2) == 'quizlet') {
+    drupal_goto('quizlet/search');
+  }
 }
 /**
 * Implementation of hook_help()
