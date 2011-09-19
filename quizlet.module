@@ -2,6 +2,10 @@
 /**
  * @file
  * This module is developed for getting quiz informations from quizlet.com.
+ *
+ * TODOS: 
+ * - Add Option to Create Multiple Instances of Same Vocabulary List IDs
+ * - Remove Anonymious Access to Delete Button at site-name.com/quizlet
  */
 /**
 * Implementation of hook_init()
@@ -91,18 +95,6 @@ function quizlet_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'quizlet.module',
   );
-/*
-  $items['node/%node/flashcards'] = array(
-    'title' => t('Flashcard'),
-    'description' => t('Flashcard page'),
-    'page callback' => 'quizlet_terms_flashcards',
-    'page arguments' => array(1),
-    'access callback' => 'quizlet_flashcards_access',
-    'access arguments' => array(1),
-    'type' => MENU_LOCAL_TASK,
-    'file' => 'quizlet.module',
-  );
-*/
   $items['node/%node/learn'] = array(
     'title' => t('Learn'),
     'description' => t('Learn page'),
@@ -154,7 +146,7 @@ function quizlet_api_form($form_state = array()) {
   );
   $form['visiblity'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Visibility Settings'),
+    '#title' => t('Search Visibility Settings'),
   );
   $form['visiblity']['quizlet_show_creator'] = array(
     '#type' => 'checkbox',
@@ -396,6 +388,8 @@ function quizlet_form(&$node, $form_state) {
     '#title' => t('Quizlet ID'),
     '#default_value' => $node->quizlet_id,
     '#required' => TRUE,
+    // '#access' => FALSE,
+	'#disabled' => TRUE,
   );
   $form['quizlet_data'] = array(
     '#type' => 'textarea',
@@ -525,7 +519,7 @@ function quizlet_lists() {
   $sql = "select nid from {node} where type='quizlet'";
   $cnt_sql = "select count(*) from {node} where type='quizlet'";
   $header = array(array('data' => t('Title'), 'field' => 'title'), array('data' => t('Created'), 'field' => 'created', 'sort' => 'desc'), array('data' => t('Changed'), 'field' => 'changed'));
-  if (user_access('quizlet save', $user)) {
+  if (user_access('delete any quizlet content', $user)) {
     $header[] =  t('Delete'); 
   }
   $sql .= tablesort_sql($header); 
@@ -537,7 +531,7 @@ function quizlet_lists() {
     $row[] = l($node->title, 'node/'. $result->nid);
     $row[] = date('m-d-Y H:i', $node->created);   
     $row[] = date('m-d-Y H:i', $node->changed);
-    if (user_access('quizlet save', $user)) {  
+    if (user_access('delete any quizlet content', $user)) {  
       $row[] = l(t('Delete'), 'node/'. $node->nid .'/delete', array('query' => 'destination=quizlet')); 
     }
     $rows[] = $row;
@@ -568,14 +562,6 @@ function quizlet_flashcards_access($node) {
   }
 }
 /**
-* Quizlet flashcards
-* 
-* @param mixed $node
-*/
-function quizlet_terms_flashcards($node) {
-  return theme_render_template(drupal_get_path('module', 'quizlet') .'/templates/flashcards.tpl.php', array('node' => $node));
-}
-/**
 * Quizlet embedded charts
 * 
 * @param mixed $node
@@ -592,7 +578,7 @@ function quizlet_terms_embeddedcards($node, $type) {
   }
   else {
 	$url = 'http://quizlet.com/'. $node->quizlet_id .'/familiarize/embed/?hideLinks';  
-    $height = 300;
+    $height = 350;
 }
   return theme_render_template(drupal_get_path('module', 'quizlet') .'/templates/embedded_cards.tpl.php', array('url' => $url, 'height' => $height));
 }
