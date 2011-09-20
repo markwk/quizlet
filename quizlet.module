@@ -4,7 +4,7 @@
  * This module is developed for getting quiz informations from quizlet.com.
  *
  * TODOS: 
- * - Add Option to Create Multiple Instances of Same Vocabulary List IDs
+ * --redevelop using new API 2.0 
  */
 /**
 * Implementation of hook_init()
@@ -114,16 +114,16 @@ function quizlet_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'quizlet.module',
   );
-$items['node/%node/flashcards'] = array(
-  'title' => t('Flashcards'),
-  'description' => t('Flashcard page'),
-  'page callback' => 'quizlet_terms_embeddedcards',
-  'page arguments' => array(1, 2),
-  'access callback' => 'quizlet_flashcards_access',
-  'access arguments' => array(1),
-  'type' => MENU_LOCAL_TASK,
-  'file' => 'quizlet.module',
-);
+  $items['node/%node/flashcards'] = array(
+    'title' => t('Flashcards'),
+    'description' => t('Flashcard page'),
+    'page callback' => 'quizlet_terms_embeddedcards',
+    'page arguments' => array(1, 2),
+    'access callback' => 'quizlet_flashcards_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'quizlet.module',
+  );
   return $items; 
 } 
 /**
@@ -161,6 +161,11 @@ function quizlet_api_form($form_state = array()) {
     '#type' => 'checkbox',
     '#title' => t('Show Last Modified'),
     '#default_value' => variable_get('quizlet_show_last_modified', ''),  
+  );
+  $form['quizlet_multiple_copy'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Allow Creating Multiple Copies of Same Quizlet Vocabulary List'),
+    '#default_value' => variable_get('quizlet_multiple_copy', ''),  
   );
   return system_settings_form($form);
 }
@@ -249,8 +254,11 @@ function quizlet_search_form($form_state = array(), $page=1) {
         $row[] = date('m-d-Y H:i', $value['last_modified']);
       }
       $nid = db_result(db_query("select nid from {quizlet_lists} where quizlet_id='%d'", $value['id']));       
-      if (user_access('quizlet save', $user)) { 
+      if (user_access('quizlet save', $user) && !variable_get('quizlet_multiple_copy', '')) { 
         $row[] = l(($nid ? t('Update') : t('Save')), 'quizlet/save/'. $value['id'], array('query' => 'keywords='. $form_state['storage']['keywords'] . $criteria));
+      }
+      else {
+        $row[] = l(($nid ? t('Save New Copy') : t('Save')), 'quizlet/save/'. $value['id'], array('query' => 'keywords='. $form_state['storage']['keywords'] . $criteria));       
       }
       $rows[] = $row;
     }
@@ -481,7 +489,7 @@ function quizlet_terms_save($id) {
   }
   else {
     $nid = db_result(db_query("select nid from {quizlet_lists} where quizlet_id='%d'", $id));
-    if ($nid) {
+    if ($nid && !variable_get('quizlet_multiple_copy', '')) {
       $node = node_load($nid);
       $node->changed = time();
       $node->title = htmlspecialchars_decode($response['sets']['0']['title'], ENT_QUOTES);
