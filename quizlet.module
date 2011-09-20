@@ -5,7 +5,6 @@
  *
  * TODOS: 
  * - Add Option to Create Multiple Instances of Same Vocabulary List IDs
- * - Remove Anonymious Access to Delete Button at site-name.com/quizlet
  */
 /**
 * Implementation of hook_init()
