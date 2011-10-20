@@ -1,7 +1,0 @@
-name = Quizlet
-description = Quizlet management module.
-package = Custom
-version = 6.x
-core = 6.x
-php = 5.1
-
