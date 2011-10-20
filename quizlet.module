@@ -395,8 +395,7 @@ function quizlet_form(&$node, $form_state) {
     '#title' => t('Quizlet ID'),
     '#default_value' => $node->quizlet_id,
     '#required' => TRUE,
-    // '#access' => FALSE,
-	'#disabled' => TRUE,
+    '#access' => FALSE,
   );
   $form['quizlet_data'] = array(
     '#type' => 'textarea',
