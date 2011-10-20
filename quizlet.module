@@ -4,7 +4,7 @@
  * This module is developed for getting quiz informations from quizlet.com.
  *
  * TODOS: 
- * --redevelop using new API 2.0 
+ * - Add Option to Create Multiple Instances of Same Vocabulary List IDs
  */
 /**
 * Implementation of hook_init()
@@ -443,10 +443,13 @@ function quizlet_delete($node) {
 function quizlet_view($node, $teaser = FALSE, $page = FALSE, $block = FALSE) {
   global $user;
   $node = node_prepare($node, $teaser);
+/* Remove Display of Quizlet ID 
+ * TODO: Add as a setting option
   $node->content['quizlet_id'] = array(
     '#value' => '<b>Quizlet ID:</b><br>'. $node->quizlet_id .'<br>', 
     '#weight' => 1,
   );
+*/
   $quizlet_data = unserialize($node->quizlet_data);
   $rows = array();
   $header  = array();
