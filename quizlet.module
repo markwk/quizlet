@@ -138,10 +138,17 @@ function quizlet_api_form($form_state = array()) {
   );
   $form['api_key']['quizlet_api_key'] = array(
     '#type' => 'textfield',
-    '#title' => t('API key'),
+    '#title' => t('Quizlet Client ID'),
     '#required' => TRUE,
     '#default_value' => variable_get('quizlet_api_key', ''),
-    '#description' => t('Enter developer API key for quizlet.'),
+    '#description' => t('Quizlet Client ID.'),
+  );
+  $form['api_key']['quizlet_secret_key'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Secret Key'),
+    '#required' => TRUE,
+    '#default_value' => variable_get('quizlet_secret_key', ''),
+    '#description' => t('Secret Key.'),
   );
   $form['visiblity'] = array(
     '#type' => 'fieldset',
@@ -177,6 +184,7 @@ function quizlet_api_form($form_state = array()) {
 function quizlet_search_form($form_state = array(), $page=1) {
   global $user;
   $key = variable_get('quizlet_api_key', '');
+  $token = variable_get('quizlet_secret_key', ''); 
   $keywords = $_GET['keywords'];
   $has_images = $_GET['has_images'] ? TRUE : FALSE;
   $sort =  $_GET['sort'] ? $_GET['sort'] : '';
@@ -189,16 +197,19 @@ function quizlet_search_form($form_state = array(), $page=1) {
   }
   if ($sort) {
     $criteria .= '&sort='. $sort; 
-  }
-  $url = 'http://api.quizlet.com/1.0/sets?dev_key='. $key .'&q='. str_replace(' ', '+', $keywords) .'&whitespace=off'. $criteria;
-  if (!$response = json_decode(quizlet_api_request($url, array()), TRUE)) {
-    drupal_set_message(t("Cannot communicate to server. Please try again."), 'warning');
-  }
-  else {
-    $form_state['storage']['data'] = $response['sets'];
-    $form_state['storage']['keywords']  = $keywords;
-    $form_state['storage']['has_images']  = $has_images; 
-    $form_state['storage']['sort'] = $sort; 
+  }  
+  $url = 'https://api.quizlet.com/2.0/search/sets?client_id='. $key .'&q='. str_replace(' ', '+', $keywords) .'&whitespace=off'. $criteria; 
+  if ($keywords) {
+    $response = json_decode(quizlet_api_request($url, $token), TRUE);
+    if (!$response) {
+      drupal_set_message(t("Cannot communicate to server. Please try again."), 'warning'); 
+    }
+    else {
+      $form_state['storage']['data'] = $response['sets'];
+      $form_state['storage']['keywords']  = $keywords;
+      $form_state['storage']['has_images']  = $has_images; 
+      $form_state['storage']['sort'] = $sort;
+    }
   }
   $form['keywords'] = array(
     '#type' => 'textfield',
@@ -289,31 +300,46 @@ function quizlet_search_form($form_state = array(), $page=1) {
 }
 function quizlet_search_form_submit($form, &$form_state) {
   $key = variable_get('quizlet_api_key', '');
+  $token = variable_get('quizlet_secret_key', ''); 
   $keywords = $form_state['values']['keywords'];
   $has_images = $_GET['has_images'] ? TRUE : FALSE;
-  $url = 'http://api.quizlet.com/1.0/sets?dev_key='. $key .'&q='. str_replace(' ', '+', $keywords) .'&whitespace=off';
-  if (!$response = json_decode(quizlet_api_request($url, array()), TRUE)) {
-    drupal_set_message(t("Cannot communicate to server"), 'error');
-  }
-  else {
-    $form_state['storage']['data'] = $response['sets'];
-    $form_state['storage']['keywords']  = $keywords;
-    $form_state['storage']['has_images']  = $has_images;
+  $url = 'https://api.quizlet.com/2.0/search/sets?client_id='. $key .'&q='. str_replace(' ', '+', $keywords) .'&whitespace=off';
+  if ($keywords) {
+    $response = json_decode(quizlet_api_request($url, $token), TRUE);
+    if (!$response) {
+      drupal_set_message(t("Cannot communicate to server. Please try again."), 'warning'); 
+    }
+    else {
+      $form_state['storage']['data'] = $response['sets'];
+      $form_state['storage']['keywords']  = $keywords;
+      $form_state['storage']['has_images']  = $has_images; 
+    }
   }
 }
 /**
 * Sending API Request
 * 
 * @param mixed $url
-* @param mixed $options
+* @param mixed $token
 */
-function quizlet_api_request($url, $options = array()) {
-  $result = drupal_http_request($url, $options);
-  if ($result->code == 200) {
-    return $result->data;
+function quizlet_api_request($url, $token) {
+  $curl = curl_init($url);
+  curl_setopt($curl, CURLOPT_HTTPHEADER, array('Authorization: Bearer '. $token));
+  curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+  $json = curl_exec($curl);
+  curl_close($curl);
+  if ($json) {
+    return $json;
   }
-  return FALSE;
+  else {
+    return FALSE;
+  }
 }
+/**
+* Getting term lists
+* 
+* @param mixed $id
+*/
 function quizlet_term_lists($id) {
   $criteria = '';
   if ($_GET['page']) {
@@ -326,30 +352,41 @@ function quizlet_term_lists($id) {
     $criteria .= '&sort='. $_GET['sort']; 
   }
   $key = variable_get('quizlet_api_key', ''); 
-  $url = 'http://api.quizlet.com/1.0/sets?dev_key='. $key .'&&q=ids:'. $id .'&extended=on&whitespace=off';
+  $token = variable_get('quizlet_secret_key', '');
+  $url = 'https://api.quizlet.com/2.0/sets/'. $id .'?client_id='. $key .'&extended=on&whitespace=off';
   $backlink = l(t('Back to search results'), 'quizlet/search', array('query' => 'keywords='. $_GET['keywords'] . $criteria));
   $nid = db_result(db_query("select nid from {quizlet_lists} where quizlet_id='%d'", $id));       
   $savelink = l(($nid ? t('Update this list') : t('Save this list')), 'quizlet/save/'. $id, array('query' => 'keywords='. $_GET['keywords'] . $criteria));
-  if (!$response = json_decode(quizlet_api_request($url, array()), TRUE)) {
+  if (!$response = json_decode(quizlet_api_request($url, $token), TRUE)) {
     drupal_set_message(t("Cannot communicate with server"), 'error');
     return $backlink;
   }
   else {
     $rows = array();
     $header  = array();
-    foreach ($response['sets']['0']['terms'] as $key => $value) {
+    foreach ($response['terms'] as $key => $value) {
       $row = array();
       foreach ($value as $k => $v) {
-        $row[] = $v;
+        if ($k == 'image') {
+          if ($v['url']) {
+            $row[] = '<img src="'. $v['url'].'" height="'. $v['height'].'" width="'. $v['width'] .'">';
+          }
+          else {
+            $row[] = '';
+          }
+        }
+        else {
+          $row[] = $v;   
+        }
       }
       $rows[] = $row;
     }
     return theme_render_template(
             drupal_get_path('module', 'quizlet') .'/templates/quizlet_list.tpl.php', 
             array(
-             'title' => $response['sets']['0']['title'],
-             'description' => $response['sets']['0']['description'],
-             'term_count' => $response['sets']['0']['term_count'],
+             'title' => $response['title'],
+             'description' => $response['description'],
+             'term_count' => $response['term_count'],
              'terms' => theme('table', $header, $rows),
              'backlink' => $backlink,
              'savelink' => $savelink 
@@ -455,7 +492,17 @@ function quizlet_view($node, $teaser = FALSE, $page = FALSE, $block = FALSE) {
   foreach ($quizlet_data as $key => $value) {
     $row = array();
     foreach ($value as $k => $v) {
-      $row[] = $v;
+      if ($k == 'image') {
+        if ($v['url']) {
+          $row[] = '<img src="'. $v['url'].'" height="'. $v['height'].'" width="'. $v['width'] .'">';
+        }
+        else {
+          $row[] = '';
+        }
+      }
+      else {
+        $row[] = $v;   
+      }
     }
     $rows[] = $row;
   }
@@ -484,8 +531,10 @@ function quizlet_terms_save($id) {
     $criteria .= '&sort='. $_GET['sort']; 
   }
   $key = variable_get('quizlet_api_key', ''); 
-  $url = 'http://api.quizlet.com/1.0/sets?dev_key='. $key .'&&q=ids:'. $id .'&extended=on&whitespace=off';
-  if (!$response = json_decode(quizlet_api_request($url, array()), TRUE)) {
+  $token = variable_get('quizlet_secret_key', '');
+  $url = 'https://api.quizlet.com/2.0/sets/'. $id .'?client_id='. $key .'&extended=on&whitespace=off';
+  
+  if (!$response = json_decode(quizlet_api_request($url, $token), TRUE)) {
     drupal_set_message(t("Cannot communicate with server"), 'error');
     drupal_goto('quizlet/search', 'keywords='. $_GET['keywords'] . $criteria);
   }
@@ -494,9 +543,9 @@ function quizlet_terms_save($id) {
     if ($nid && !variable_get('quizlet_multiple_copy', '')) {
       $node = node_load($nid);
       $node->changed = time();
-      $node->title = htmlspecialchars_decode($response['sets']['0']['title'], ENT_QUOTES);
-      $node->body = $response['sets']['0']['description'];
-      $node->quizlet_data = serialize($response['sets']['0']['terms']);
+      $node->title = htmlspecialchars_decode($response['title'], ENT_QUOTES);
+      $node->body = $response['description'];
+      $node->quizlet_data = serialize($response['terms']);
       $node->quizlet_id = $id;
       node_save($node);
       drupal_set_message(t('Quizlet list updated successfully.'));
@@ -508,9 +557,9 @@ function quizlet_terms_save($id) {
       $node->uid = $user->uid;
       $node->created = time();
       $node->changed = time();
-      $node->title = htmlspecialchars_decode($response['sets']['0']['title'], ENT_QUOTES);
-      $node->body = $response['sets']['0']['description'];
-      $node->quizlet_data = serialize($response['sets']['0']['terms']);
+      $node->title = htmlspecialchars_decode($response['title'], ENT_QUOTES);
+      $node->body = $response['description'];
+      $node->quizlet_data = serialize($response['terms']);
       $node->quizlet_id = $id;
       node_save($node);
       drupal_set_message(t('Quizlet list saved successfully.'));  
@@ -586,11 +635,17 @@ function quizlet_terms_embeddedcards($node, $type) {
     $height = 520; 
   }
   else {
-	$url = 'http://quizlet.com/'. $node->quizlet_id .'/familiarize/embed/?hideLinks';  
+	  $url = 'http://quizlet.com/'. $node->quizlet_id .'/familiarize/embed/?hideLinks';  
     $height = 350;
-}
+  }
   return theme_render_template(drupal_get_path('module', 'quizlet') .'/templates/embedded_cards.tpl.php', array('url' => $url, 'height' => $height));
 }
+/**
+* Selection of cards
+* 
+* @param mixed $form_state
+* @param mixed $node
+*/
 function quizlet_selection_cards($form_state = array(), $node) {
   $flashcard = url('node/'. $node->nid .'/flashcards', array('absolute' => TRUE));
   $learn = url('node/'. $node->nid .'/learn', array('absolute' => TRUE));
@@ -629,4 +684,4 @@ function quizlet_block($op = 'list', $delta = 0, $edit = array()) {
     }
     return $block;
   }
-}
+}
