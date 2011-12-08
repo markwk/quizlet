@@ -59,6 +59,19 @@ function quizlet_menu() {
     'access arguments' => array('administrator quizlet'),
     'file' => 'quizlet.module',
   );
+  $items['admin/settings/quizlet/keys'] = array(
+    'title' => 'Quizlet Settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['admin/settings/quizlet/token'] = array(
+    'title' => t('Quizlet Token'),
+    'description' => t('Quizlet Token'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quizlet_api_token_form'),
+    'access arguments' => array('administrator quizlet'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'quizlet.module',
+  );
   $items['quizlet/search'] = array(
     'title' => t('Quizlet Search'),
     'description' => t('Quizlet Search Page'),
@@ -124,6 +137,33 @@ function quizlet_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'quizlet.module',
   );
+  $items['quizlet/group'] = array(
+    'title' => t('Quizlet Group'),
+    'description' => t('Quizlet Group'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('quizlet_group_form'),
+    'access arguments' => array('quizlet group'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'quizlet.module',
+  );
+  $items['quizlet/group/list/%'] = array(
+    'title' => t('Quizlet Group Lists'),
+    'description' => t('Quizlet Group Lists Page'),
+    'page callback' => 'quizlet_group_term_lists',
+    'page arguments' => array(3),
+    'access arguments' => array('quizlet search'),
+    'type' => MENU_CALLBACK,
+    'file' => 'quizlet.module',
+  );
+  $items['quizlet/group/save/%'] = array(
+    'title' => t('Quizlet Group Save'),
+    'description' => t('Quizlet Group Lists Save'),
+    'page callback' => 'quizlet_group_terms_save',
+    'page arguments' => array(3),
+    'access arguments' => array('quizlet save'),
+    'type' => MENU_CALLBACK,
+    'file' => 'quizlet.module',
+  );
   return $items; 
 } 
 /**
@@ -184,7 +224,7 @@ function quizlet_api_form($form_state = array()) {
 function quizlet_search_form($form_state = array(), $page=1) {
   global $user;
   $key = variable_get('quizlet_api_key', '');
-  $token = variable_get('quizlet_secret_key', ''); 
+  $token = variable_get('quizlet_access_token', ''); 
   $keywords = $_GET['keywords'];
   $has_images = $_GET['has_images'] ? TRUE : FALSE;
   $sort =  $_GET['sort'] ? $_GET['sort'] : '';
@@ -300,7 +340,7 @@ function quizlet_search_form($form_state = array(), $page=1) {
 }
 function quizlet_search_form_submit($form, &$form_state) {
   $key = variable_get('quizlet_api_key', '');
-  $token = variable_get('quizlet_secret_key', ''); 
+  $token = variable_get('quizlet_access_token', ''); 
   $keywords = $form_state['values']['keywords'];
   $has_images = $_GET['has_images'] ? TRUE : FALSE;
   $url = 'https://api.quizlet.com/2.0/search/sets?client_id='. $key .'&q='. str_replace(' ', '+', $keywords) .'&whitespace=off';
@@ -352,7 +392,7 @@ function quizlet_term_lists($id) {
     $criteria .= '&sort='. $_GET['sort']; 
   }
   $key = variable_get('quizlet_api_key', ''); 
-  $token = variable_get('quizlet_secret_key', '');
+  $token = variable_get('quizlet_access_token', ''); 
   $url = 'https://api.quizlet.com/2.0/sets/'. $id .'?client_id='. $key .'&extended=on&whitespace=off';
   $backlink = l(t('Back to search results'), 'quizlet/search', array('query' => 'keywords='. $_GET['keywords'] . $criteria));
   $nid = db_result(db_query("select nid from {quizlet_lists} where quizlet_id='%d'", $id));       
@@ -401,7 +441,16 @@ function quizlet_node_info() {
     'quizlet' => array(
       'name' => t('Quizlet List'),
       'module' => 'quizlet',
-      'description' => t("Custom content type to store quizlet quizlet lists"),
+      'description' => t("Custom content type to store quizlet lists"),
+      'has_title' => TRUE,
+      'title_label' => t('Title'),
+      'body_label' => t('Description'),
+      'has_body' => TRUE,
+    ),
+    'quizlet_private' => array(
+      'name' => t('Quizlet Private'),
+      'module' => 'quizlet_private',
+      'description' => t("Custom content type to store quizlet group lists"),
       'has_title' => TRUE,
       'title_label' => t('Title'),
       'body_label' => t('Description'),
@@ -445,6 +494,10 @@ function quizlet_form(&$node, $form_state) {
   $form['filter'] = filter_form($node->format);
   return $form;
 }
+//Quizlet Private List
+function quizlet_private_form(&$node, $form_state) {
+  return quizlet_form($node, $form_state);
+}
 /**
  * Implementation of hook_load().
  */
@@ -453,11 +506,21 @@ function quizlet_load($node) {
   $quizlet = db_fetch_object(db_query("SELECT quizlet_id, quizlet_data FROM {quizlet_lists} WHERE nid = %d", $node->nid));
   return $quizlet;
 }
+//Quizlet Private List
+function quizlet_private_load($node) {
+  global $user;
+  $quizlet = db_fetch_object(db_query("SELECT quizlet_id, quizlet_data FROM {quizlet_private_lists} WHERE nid = %d", $node->nid));
+  return $quizlet;
+}
 /**
  * Implementation of hook_insert().
  */
 function quizlet_insert($node) {
   db_query("INSERT INTO {quizlet_lists} (nid, quizlet_id, quizlet_data) VALUES ('%d', '%d', '%s')", $node->nid, $node->quizlet_id, $node->quizlet_data);
+}
+//Quizlet Private List Insert
+function quizlet_private_insert($node) {
+  db_query("INSERT INTO {quizlet_private_lists} (nid, quizlet_id, quizlet_data) VALUES ('%d', '%d', '%s')", $node->nid, $node->quizlet_id, $node->quizlet_data);
 }
 /**
  * Implementation of hook_update().
@@ -465,11 +528,18 @@ function quizlet_insert($node) {
 function quizlet_update($node) {
   db_query("UPDATE {quizlet_lists} SET quizlet_data = '%s' WHERE nid = '%d'", $node->quizlet_data, $node->nid);
 }
+//Quizlet Private List Update
+function quizlet_private_update($node) {
+  db_query("UPDATE {quizlet_private_lists} SET quizlet_data = '%s' WHERE nid = '%d'", $node->quizlet_data, $node->nid);
+}
 /**
  * Implementation of hook_delete().
  */
 function quizlet_delete($node) {
   db_query("DELETE FROM {quizlet_lists} WHERE nid = %d", $node->nid);  
+}
+function quizlet_private_delete($node) {
+  db_query("DELETE FROM {quizlet_private_lists} WHERE nid = %d", $node->nid);  
 }
 /**
  * Implementation of hook_view().
@@ -513,6 +583,10 @@ function quizlet_view($node, $teaser = FALSE, $page = FALSE, $block = FALSE) {
   );
   return $node;
 }
+//Quizlet Private List View
+function quizlet_private_view($node, $teaser = FALSE, $page = FALSE, $block = FALSE) {
+  return quizlet_view($node, $teaser = FALSE, $page = FALSE, $block = FALSE);
+}
 /**
 * Save quizlet lists
 * 
@@ -531,7 +605,7 @@ function quizlet_terms_save($id) {
     $criteria .= '&sort='. $_GET['sort']; 
   }
   $key = variable_get('quizlet_api_key', ''); 
-  $token = variable_get('quizlet_secret_key', '');
+  $token = variable_get('quizlet_access_token', ''); 
   $url = 'https://api.quizlet.com/2.0/sets/'. $id .'?client_id='. $key .'&extended=on&whitespace=off';
   
   if (!$response = json_decode(quizlet_api_request($url, $token), TRUE)) {
@@ -615,6 +689,9 @@ function quizlet_flashcards_access($node) {
   if ($node->type == 'quizlet' && user_access('view flashcards', $user)) {
     return TRUE;  
   }
+	elseif ($node->type == 'quizlet_private'  && user_access('view flashcards', $user)) {
+	  return TRUE;
+	}
   else {
     return FALSE; 
   }
@@ -684,4 +761,209 @@ function quizlet_block($op = 'list', $delta = 0, $edit = array()) {
     }
     return $block;
   }
-}
+}
+/**
+* Quizlet API get token form
+* 
+* @param mixed $form_state
+*/
+function quizlet_api_token_form($form_state = array()) {
+  $clientid = variable_get('quizlet_api_key', '');
+  $secretkey = variable_get('quizlet_secret_key', ''); 
+  if (empty($clientid) || empty($secretkey)) {
+    form_set_error('', 'Please enter client id and secret key first.'); 
+    drupal_goto('admin/settings/quizlet');
+  }
+  $accesstoken = variable_get('quizlet_access_token', '');
+  $siteurl = url('admin/settings/quizlet/token', array('absolute' => TRUE)); 
+  $authorizeUrl = "https://quizlet.com/authorize/?client_id={$clientid}&response_type=code&scope=read%20write_set";
+  $tokenUrl = 'https://api.quizlet.com/oauth/token';
+  if (empty($_GET['code']) && empty($_GET['error']) && empty($accesstoken)) {
+    $_SESSION['state'] = md5(mt_rand().microtime(true));    
+    $form['path'] = array(
+      '#type' => 'item',
+      '#value' => '<a href="'.$authorizeUrl.'&state='.$_SESSION['state'].'&redirect_uri='. $siteurl .'">Authorize Site First</a>'
+    );
+  }
+  if (!empty($_GET['error'])) { // An error occurred authorizing
+    form_set_error('path', 'Error:' . $_GET['error']);
+  }
+  if (empty($accesstoken) && $_GET['code']) { 
+    $payload = array(
+      'code' => $_GET['code'],
+      'redirect_uri' => $siteurl,
+      'grant_type' => 'authorization_code'
+    );
+    $curl = curl_init($tokenUrl);
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($curl, CURLOPT_USERPWD, "{$clientid}:{$secretkey}");
+    curl_setopt($curl, CURLOPT_POST, true);
+    curl_setopt($curl, CURLOPT_POSTFIELDS, $payload);
+    $token = json_decode(curl_exec($curl), true);
+    $responseCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    curl_close($curl);
+     
+    if ($responseCode != 200) { // An error occurred getting the token
+      form_set_error('path', 'Error:' . $token['error']); 
+    }
+  }
+  $form['quizlet_access_token'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Token'),
+    '#default_value' => variable_get('quizlet_access_token', $token['access_token']),
+    '#required' => TRUE,
+    '#attributes' => array('readonly' => 'readonly'),
+  );
+  return system_settings_form($form); 
+}
+/**
+* Group search form
+* 
+* @param mixed $form_state
+*/
+function quizlet_group_form($form_state = array()) {
+  global $user;
+  $token = variable_get('quizlet_access_token', '');
+  $group_id = $_GET['group_id']; 
+  $url = 'https://api.quizlet.com/2.0/groups/'. $group_id .'/sets';	
+  if ($group_id) {
+    $response = json_decode(quizlet_api_request($url, $token), TRUE);
+    if (!$response) {
+      drupal_set_message(t("Cannot communicate to server. Please try again."), 'warning'); 
+    }
+    else {
+      $form_state['storage']['group_id'] = $group_id;
+      $form_state['storage']['data'] = $response;
+    }
+  }
+  $form['group_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Enter Group ID'),
+    '#required' => TRUE,
+    '#default_value' => $form_state['storage']['group_id'],
+    '#description' => t('Enter group id to get data'),
+  );
+  $form['search'] = array(
+    '#type' => 'submit',
+    '#title' => t('Search'),
+    '#value' => t('Search'),
+  );
+  if (!empty($form_state['storage']['data'])) {
+    $header = array(t('Title'), t('Term Count'), t('Save'));
+    $rows = array();
+    foreach ($form_state['storage']['data'] as $key => $value) {
+      $row = array();
+			$row[] = l($value['title'], 'quizlet/group/list/'. $value['id'], array('query' => 'group_id='.$group_id));
+			$row[] = $value['term_count'];
+			$row[] = l('Save', 'quizlet/group/save/'. $value['id'],  array('query' => 'group_id='.$group_id));
+      $rows[] = $row;
+    }
+    if (!empty($rows)) {
+      $output = theme('table', $header, $rows); 
+    }
+    else {
+      $output = t('No results found.');
+    }
+  }
+  elseif (!empty($form_state['storage']['group_id'])) {
+    $output = t('No results found.');  
+  }
+	$form['data'] = array(
+		'#type' => 'item',
+		'#value' => $output
+	);
+  $form['#method'] = 'GET';
+  $form['#action'] = url('quizlet/group');
+  return $form;
+}
+/**
+* Show quizlet group list details
+* 
+* @param mixed $set_id
+*/
+function quizlet_group_term_lists($set_id) {
+  $key = variable_get('quizlet_api_key', ''); 
+  $token = variable_get('quizlet_access_token', '');
+  $url = 'https://api.quizlet.com/2.0/sets/'. $set_id .'?client_id='. $key .'&extended=on&whitespace=off';
+  $backlink = l(t('Back to group'), 'quizlet/group', array('query' => 'group_id='. $_GET['group_id']));
+  $nid = db_result(db_query("select nid from {quizlet_private_lists} where quizlet_id='%d'", $set_id));       
+  $savelink = l(($nid ? t('Update this list') : t('Save this list')), 'quizlet/group/save/'. $set_id, array('query' => 'group_id='. $_GET['group_id'] . $criteria));
+  if (!$response = json_decode(quizlet_api_request($url, $token), TRUE)) {
+    drupal_set_message(t("Cannot communicate with server"), 'error');
+    return $backlink;
+  }
+  else {
+    $rows = array();
+    $header  = array();
+    foreach ($response['terms'] as $key => $value) {
+      $row = array();
+      foreach ($value as $k => $v) {
+        if ($k == 'image') {
+          if ($v['url']) {
+            $row[] = '<img src="'. $v['url'].'" height="'. $v['height'].'" width="'. $v['width'] .'">';
+          }
+          else {
+            $row[] = '';
+          }
+        }
+        else {
+          $row[] = $v;   
+        }
+      }
+      $rows[] = $row;
+    }
+    return theme_render_template(
+            drupal_get_path('module', 'quizlet') .'/templates/quizlet_list.tpl.php', 
+            array(
+             'title' => $response['title'],
+             'description' => $response['description'],
+             'term_count' => $response['term_count'],
+             'terms' => theme('table', $header, $rows),
+             'backlink' => $backlink,
+             'savelink' => $savelink 
+           ));
+   }  
+}
+/**
+* Save quizlet group lists
+* 
+* @param mixed $id
+*/
+function quizlet_group_terms_save($id) {
+  global $user;
+  $key = variable_get('quizlet_api_key', ''); 
+  $token = variable_get('quizlet_access_token', '');
+  $url = 'https://api.quizlet.com/2.0/sets/'. $id .'?client_id='. $key .'&extended=on&whitespace=off';
+  if (!$response = json_decode(quizlet_api_request($url, $token), TRUE)) {
+    drupal_set_message(t("Cannot communicate with server"), 'error');
+    drupal_goto('quizlet/group', 'group_id='. $_GET['group_id']);
+  }
+  else {
+    $nid = db_result(db_query("select nid from {quizlet_private_lists} where quizlet_id='%d'", $id));
+    if ($nid && !variable_get('quizlet_multiple_copy', '')) {
+      $node = node_load($nid);
+      $node->changed = time();
+      $node->title = htmlspecialchars_decode($response['title'], ENT_QUOTES);
+      $node->body = $response['description'];
+      $node->quizlet_data = serialize($response['terms']);
+      $node->quizlet_id = $id;
+      node_save($node);
+      drupal_set_message(t('Quizlet private list updated successfully.'));
+    }
+    else {
+      $node = new stdClass();
+      $node->type = 'quizlet_private';
+      $node->status = 1;
+      $node->uid = $user->uid;
+      $node->created = time();
+      $node->changed = time();
+      $node->title = htmlspecialchars_decode($response['title'], ENT_QUOTES);
+      $node->body = $response['description'];
+      $node->quizlet_data = serialize($response['terms']);
+      $node->quizlet_id = $id;
+      node_save($node);
+      drupal_set_message(t('Quizlet private list saved successfully.'));  
+    }
+    drupal_goto('node/'. $node->nid);  
+  }
+}
