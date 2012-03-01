@@ -1,32 +1,23 @@
 <?php
-
 /**
- * @file                        
+ * @file
  * Installation file for Quizlet Settings module.
  */
 
 /**
- * Implementation of hook_enable().
+ * Implements hook_enable().
  */
-function quizlet_enable() {  
-  drupal_set_message('Please add your Quizlet API Developers Key at '. l(t('Quizlet Settings'), 'admin/settings/quizlet'), 'warning');
-}
-/**
- * Implementation of hook_install().
- */
-function quizlet_install() {
-  // Create tables.
-  drupal_install_schema('quizlet');
+function quizlet_enable() {
+  drupal_set_message(t('Please add your Quizlet API Developers Key at ' . l(t('Quizlet Settings'), 'admin/settings/quizlet')), 'warning');
 }
 /** 
- * Implementation of hook_uninstall(). 
+ * Implements hook_uninstall(). 
  */ 
-function quizlet_uninstall() { 
-  variable_del('quizlet_api_key');
-  drupal_uninstall_schema('quizlet'); 
+function quizlet_uninstall() {
+  variable_del('quizlet_api_key'); 
 }
 /**
- * Implementation of hook_schema().
+ * Implements hook_schema().
  */
 function quizlet_schema() {
   $schema['quizlet_lists'] = array(
@@ -37,7 +28,7 @@ function quizlet_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
-        'description' => "The quizlet lists {node}.nid."
+        'description' => 'The quizlet lists {node}.nid.',
         ),
       'quizlet_id' => array(
         'type' => 'int',
@@ -48,7 +39,6 @@ function quizlet_schema() {
       'quizlet_data' => array(
         'type' => 'text',
         'not null' => TRUE,
-        'default' => '',
         'description' => 'The quizlet Data.',
        ),
       ),
@@ -62,56 +52,21 @@ function quizlet_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
-        'description' => "The quizlet lists {node}.nid."
+        'description' => 'The quizlet lists {node}.nid.',
         ),
       'quizlet_id' => array(
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
-        'description' => 'quizlet id.'
+        'description' => 'Quizlet id.'
         ),
       'quizlet_data' => array(
         'type' => 'text',
         'not null' => TRUE,
-        'default' => '',
         'description' => 'The quizlet Data.',
        ),
       ),
     'primary key' => array('nid'),
   );
   return $schema;
-}
-/**
-* Adding table for quizlet groups
-* 
-*/
-function quizlet_update_6001() {
-  $schema['quizlet_private_lists'] = array(
-    'description' => 'Stores quizlet lists.',
-    'fields' => array(
-      'nid'     => array(
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-        'description' => "The quizlet lists {node}.nid."
-        ),
-      'quizlet_id' => array(
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-        'description' => 'quizlet id.'
-        ),
-      'quizlet_data' => array(
-        'type' => 'text',
-        'not null' => TRUE,
-        'default' => '',
-        'description' => 'The quizlet Data.',
-       ),
-      ),
-    'primary key' => array('nid'),
-  );
-  $ret = array();
-  db_create_table($ret, 'quizlet_private_lists', $schema['quizlet_private_lists']);
-  return $ret;
 }
