@@ -6,6 +6,12 @@
  * TODOS: 
  * - Add Option to Create Multiple Instances of Same Vocabulary List IDs
  */
+ 
+/**
+* Quizlet Custom path.
+*/
+define('QUIZLET_PATH', variable_get('quizlet_custom_path', 'quizlet'));
+
 /**
  * Implements hook_init().
  * 
@@ -14,7 +20,7 @@ function quizlet_init() {
   drupal_add_css(drupal_get_path('module', 'quizlet') . '/css/quizlet.css'); 
   drupal_add_js(drupal_get_path('module', 'quizlet') . '/js/quizlet.js'); 
   if (arg(0) == 'node' && arg(1) == 'add' && arg(2) == 'quizlet') {
-    drupal_goto('quizlet/search');
+    drupal_goto(QUIZLET_PATH . '/search');
   }
 }
 /**
@@ -107,7 +113,7 @@ function quizlet_node_access($node, $op, $account) {
  * 
  */
 function quizlet_menu() {
-  $items['admin/config/media/quizlet'] = array(
+  $items['admin/settings/quizlet'] = array(
     'title' => 'Quizlet Settings',
     'description' => 'Quizlet Settings Page',
     'page callback' => 'drupal_get_form',
@@ -115,11 +121,11 @@ function quizlet_menu() {
     'access arguments' => array('administrator quizlet'),
     'file' => 'quizlet.module',
   );
-  $items['admin/config/media/quizlet/keys'] = array(
+  $items['admin/settings/quizlet/keys'] = array(
     'title' => 'Quizlet Settings',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-  $items['admin/config/media/quizlet/token'] = array(
+  $items['admin/settings/quizlet/token'] = array(
     'title' => 'Quizlet Token',
     'description' => 'Quizlet Token',
     'page callback' => 'drupal_get_form',
@@ -128,7 +134,7 @@ function quizlet_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'quizlet.module',
   );
-  $items['quizlet/search'] = array(
+  $items[QUIZLET_PATH . '/search'] = array(
     'title' => 'Quizlet Search',
     'description' => 'Quizlet Search Page',
     'page callback' => 'drupal_get_form',
@@ -137,7 +143,7 @@ function quizlet_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'quizlet.module',
   );
-  $items['quizlet'] = array(
+  $items[QUIZLET_PATH] = array(
     'title' => 'Quizlet Saved Lists',
     'description' => 'Quizlet Lists Page',
     'page callback' => 'quizlet_lists',
@@ -145,7 +151,7 @@ function quizlet_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'quizlet.module',
   );
-  $items['quizlet/list/%'] = array(
+  $items[QUIZLET_PATH . '/list/%'] = array(
     'title' => 'Quizlet Lists',
     'description' => 'Quizlet Lists Page',
     'page callback' => 'quizlet_term_lists',
@@ -154,7 +160,7 @@ function quizlet_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'quizlet.module',
   );
-  $items['quizlet/save/%'] = array(
+  $items[QUIZLET_PATH . '/save/%'] = array(
     'title' => 'Quizlet Save',
     'description' => 'Quizlet Lists Save',
     'page callback' => 'quizlet_terms_save',
@@ -193,7 +199,7 @@ function quizlet_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'quizlet.module',
   );
-  $items['quizlet/group'] = array(
+  $items[QUIZLET_PATH . '/group'] = array(
     'title' => 'Quizlet Group',
     'description' => 'Quizlet Group',
     'page callback' => 'drupal_get_form',
@@ -202,7 +208,7 @@ function quizlet_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'quizlet.module',
   );
-  $items['quizlet/group/list/%'] = array(
+  $items[QUIZLET_PATH . '/group/list/%'] = array(
     'title' => 'Quizlet Group Lists',
     'description' => 'Quizlet Group Lists Page',
     'page callback' => 'quizlet_group_term_lists',
@@ -211,7 +217,7 @@ function quizlet_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'quizlet.module',
   );
-  $items['quizlet/group/save/%'] = array(
+  $items[QUIZLET_PATH . '/group/save/%'] = array(
     'title' => 'Quizlet Group Save',
     'description' => 'Quizlet Group Lists Save',
     'page callback' => 'quizlet_group_terms_save',
@@ -270,7 +276,24 @@ function quizlet_api_form($form, &$form_state) {
     '#title' => t('Allow Creating Multiple Copies of Same Quizlet Vocabulary List'),
     '#default_value' => variable_get('quizlet_multiple_copy', ''),  
   );
+  $form['quizlet_custom_path'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Quizlet custom path'),
+    '#required' => TRUE,
+    '#default_value' => variable_get('quizlet_custom_path', 'quizlet'),
+    '#description' => t('Add custom path like "flashcards", "testpath" instead of "quizlet" if you want to do that.'),
+  );
+  $form['#submit'][] = 'quizlet_api_form_submit';
   return system_settings_form($form);
+}
+/**
+ * 
+ * API form Submit
+ * @param mixed $form
+ * @param mixed $form_state
+ */
+function quizlet_api_form_submit($form, &$form_state) {
+  drupal_flush_all_caches(); 
 }
 /**
  * Quizlet Search Form
@@ -350,7 +373,7 @@ function quizlet_search_form($form, &$form_state, $page=1) {
     $rows = array();
     foreach ($form_state['storage']['data'] as $key => $value) {
       $row = array();
-      $row[] = l(htmlspecialchars_decode($value['title'], ENT_QUOTES), 'quizlet/list/' . $value['id'], array('query' => array('keywords' =>  $form_state['storage']['keywords'] . $criteria)));
+      $row[] = l(htmlspecialchars_decode($value['title'], ENT_QUOTES), QUIZLET_PATH . '/list/' . $value['id'], array('query' => array('keywords' =>  $form_state['storage']['keywords'] . $criteria)));
       $row[] = $value['term_count'];  
       if (variable_get('quizlet_show_creator', '')) { 
         $row[] = $value['creator'];
@@ -363,10 +386,10 @@ function quizlet_search_form($form, &$form_state, $page=1) {
       }
       $nid = db_query("select nid from {quizlet_lists} where quizlet_id=:id", array(':id' => $value['id']))->fetchField();       
       if (user_access('quizlet save', $user) && !variable_get('quizlet_multiple_copy', '')) { 
-        $row[] = l(($nid ? t('Update') : t('Save')), 'quizlet/save/' . $value['id'], array('query' => array('keywords' => $form_state['storage']['keywords'] . $criteria)));
+        $row[] = l(($nid ? t('Update') : t('Save')), QUIZLET_PATH . '/save/' . $value['id'], array('query' => array('keywords' => $form_state['storage']['keywords'] . $criteria)));
       }
       else {
-        $row[] = l(($nid ? t('Save New Copy') : t('Save')), 'quizlet/save/' . $value['id'], array('query' => array('keywords' => $form_state['storage']['keywords'] . $criteria)));       
+        $row[] = l(($nid ? t('Save New Copy') : t('Save')), QUIZLET_PATH . '/save/' . $value['id'], array('query' => array('keywords' => $form_state['storage']['keywords'] . $criteria)));       
       }     
       $rows[] = $row;
     }
@@ -392,7 +415,7 @@ function quizlet_search_form($form, &$form_state, $page=1) {
     );
   }
   $form['#method'] = 'GET';
-  $form['#action'] = url('quizlet/search');
+  $form['#action'] = url(QUIZLET_PATH . '/search');
   return $form;
 }
 /**
@@ -405,7 +428,7 @@ function quizlet_search_form_submit($form, &$form_state) {
   $key = variable_get('quizlet_api_key', '');
   $token = variable_get('quizlet_access_token', ''); 
   $keywords = $form_state['values']['keywords'];
-  $has_images = $_GET['has_images'] ? TRUE : FALSE;
+  $has_images = !empty($_GET['has_images']) ? TRUE : FALSE;
   $url = 'https://api.quizlet.com/2.0/search/sets?client_id=' . $key . '&q=' . str_replace(' ', '+', $keywords) . '&whitespace=off';
   if ($keywords) {
     $response = json_decode(quizlet_api_request($url, $token), TRUE);
@@ -445,21 +468,21 @@ function quizlet_api_request($url, $token) {
  */
 function quizlet_term_lists($id) {
   $criteria = '';
-  if ($_GET['page']) {
+  if (!empty($_GET['page'])) {
     $criteria .= '&page=' . ($_GET['page']+1);
   } 
-  if ($_GET['has_images']) {
+  if (!empty($_GET['has_images'])) {
     $criteria .= '&images_only=on';
   }
-  if ($_GET['sort']) {
+  if (!empty($_GET['sort'])) {
     $criteria .= '&sort=' . $_GET['sort']; 
   }
   $key = variable_get('quizlet_api_key', ''); 
   $token = variable_get('quizlet_access_token', ''); 
   $url = 'https://api.quizlet.com/2.0/sets/' . $id . '?client_id=' . $key . '&extended=on&whitespace=off';
-  $backlink = l(t('Back to search results'), 'quizlet/search', array('query' => 'keywords=' . $_GET['keywords'] . $criteria)); 
+  $backlink = l(t('Back to search results'), QUIZLET_PATH . '/search', array('query' => array('keywords' => $_GET['keywords'] . $criteria))); 
   $nid = db_query("select nid from {quizlet_lists} where quizlet_id=:id", array(':id' => $id))->fetchField();      
-  $savelink = l(($nid ? t('Update this list') : t('Save this list')), 'quizlet/save/' . $id, array('query' => 'keywords=' . $_GET['keywords'] . $criteria));
+  $savelink = l(($nid ? t('Update this list') : t('Save this list')), QUIZLET_PATH . '/save/' . $id, array('query' => array('keywords' => $_GET['keywords'] . $criteria)));
   if (!$response = json_decode(quizlet_api_request($url, $token), TRUE)) {
     drupal_set_message(t("Cannot communicate with server"), 'error');
     return $backlink;
@@ -690,7 +713,7 @@ function quizlet_terms_save($id) {
   
   if (!$response = json_decode(quizlet_api_request($url, $token), TRUE)) {
     drupal_set_message(t("Cannot communicate with server"), 'error');
-    drupal_goto('quizlet/search', 'keywords=' . $_GET['keywords'] . $criteria);
+    drupal_goto(QUIZLET_PATH . '/search', 'keywords=' . $_GET['keywords'] . $criteria);
   }
   else {
     $nid = db_query("select nid from {quizlet_lists} where quizlet_id=:id", array(':id' => $id))->fetchField(); 
@@ -941,9 +964,9 @@ function quizlet_group_form($form, &$form_state) {
     $rows = array();
     foreach ($form_state['storage']['data'] as $key => $value) {
       $row = array();
-      $row[] = l($value['title'], 'quizlet/group/list/' . $value['id'], array('query' => array('group_id' => $group_id)));
+      $row[] = l($value['title'], QUIZLET_PATH . '/group/list/' . $value['id'], array('query' => array('group_id' => $group_id)));
       $row[] = $value['term_count'];
-      $row[] = l('Save', 'quizlet/group/save/' . $value['id'],  array('query' => array('group_id' => $group_id)));
+      $row[] = l('Save', QUIZLET_PATH . '/group/save/' . $value['id'],  array('query' => array('group_id' => $group_id)));
       $rows[] = $row;
     }
     if (!empty($rows)) {
@@ -961,7 +984,7 @@ function quizlet_group_form($form, &$form_state) {
     '#prefix' => $output
   );
   $form['#method'] = 'GET';
-  $form['#action'] = url('quizlet/group');
+  $form['#action'] = url(QUIZLET_PATH . '/group');
   return $form;
 }
 /**
@@ -973,9 +996,9 @@ function quizlet_group_term_lists($set_id) {
   $key = variable_get('quizlet_api_key', ''); 
   $token = variable_get('quizlet_access_token', '');
   $url = 'https://api.quizlet.com/2.0/sets/' . $set_id . '?client_id=' . $key . '&extended=on&whitespace=off';
-  $backlink = l(t('Back to group'), 'quizlet/group', array('query' => 'group_id=' . $_GET['group_id']));
+  $backlink = l(t('Back to group'), QUIZLET_PATH . '/group', array('query' => 'group_id=' . $_GET['group_id']));
   $nid = db_query("select nid from {quizlet_lists} where quizlet_id=:id", array(':id' => $set_id))->fetchField();       
-  $savelink = l(($nid ? t('Update this list') : t('Save this list')), 'quizlet/group/save/' . $set_id, array('query' => 'group_id=' . $_GET['group_id'] . $criteria));
+  $savelink = l(($nid ? t('Update this list') : t('Save this list')), QUIZLET_PATH . '/group/save/' . $set_id, array('query' => 'group_id=' . $_GET['group_id'] . $criteria));
   if (!$response = json_decode(quizlet_api_request($url, $token), TRUE)) {
     drupal_set_message(t("Cannot communicate with server"), 'error');
     return $backlink;
@@ -1024,7 +1047,7 @@ function quizlet_group_terms_save($id) {
   $url = 'https://api.quizlet.com/2.0/sets/' . $id . '?client_id=' . $key . '&extended=on&whitespace=off';
   if (!$response = json_decode(quizlet_api_request($url, $token), TRUE)) {
     drupal_set_message(t("Cannot communicate with server"), 'error');
-    drupal_goto('quizlet/group', 'group_id=' . $_GET['group_id']);
+    drupal_goto(QUIZLET_PATH . '/group', 'group_id=' . $_GET['group_id']);
   }
   else {
     $nid = db_query("select nid from {quizlet_private_lists} where quizlet_id=:id", array(':id' => $id))->fetchField(); 
