@@ -113,7 +113,7 @@ function quizlet_node_access($node, $op, $account) {
  * 
  */
 function quizlet_menu() {
-  $items['admin/config/media/quizlet'] = array(
+  $items['admin/config/services/quizlet'] = array(
     'title' => 'Quizlet Settings',
     'description' => 'Quizlet Settings Page',
     'page callback' => 'drupal_get_form',
@@ -121,11 +121,11 @@ function quizlet_menu() {
     'access arguments' => array('administrator quizlet'),
     'file' => 'quizlet.module',
   );
-  $items['admin/config/media/quizlet/keys'] = array(
+  $items['admin/config/services/quizlet/keys'] = array(
     'title' => 'Quizlet Settings',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-  $items['admin/config/media/quizlet/token'] = array(
+  $items['admin/config/services/quizlet/token'] = array(
     'title' => 'Quizlet Token',
     'description' => 'Quizlet Token',
     'page callback' => 'drupal_get_form',
