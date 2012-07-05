@@ -135,7 +135,7 @@ function quizlet_menu() {
     'file' => 'quizlet.module',
   );
   $items[QUIZLET_PATH . '/search'] = array(
-    'title' => 'Quizlet Search',
+    'title' => variable_get('quizlet_custom_search_title', 'Quizlet Search'),
     'description' => 'Quizlet Search Page',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('quizlet_search_form'),
@@ -144,7 +144,7 @@ function quizlet_menu() {
     'file' => 'quizlet.module',
   );
   $items[QUIZLET_PATH] = array(
-    'title' => 'Quizlet Saved Lists',
+    'title' => variable_get('quizlet_custom_search_breadcrumb', 'Quizlet Saved Lists.'),
     'description' => 'Quizlet Lists Page',
     'page callback' => 'quizlet_lists',
     'access arguments' => array('quizlet search'),
@@ -283,6 +283,34 @@ function quizlet_api_form($form, &$form_state) {
     '#default_value' => variable_get('quizlet_custom_path', 'quizlet'),
     '#description' => t('Add custom path like "flashcards", "testpath" instead of "quizlet" if you want to do that.'),
   );
+  $form['quizlet_custom_search_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Quizlet custom search title'),
+    '#required' => TRUE,
+    '#default_value' => variable_get('quizlet_custom_search_title', 'Quizlet Search'),
+    '#description' => t('Enter quizlet search page title.'),
+  );
+  $form['quizlet_custom_list_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Quizlet list page title'),
+    '#required' => TRUE,
+    '#default_value' => variable_get('quizlet_custom_list_title', 'Most Recently Saved Quizlet Vocabulary Lists'),
+    '#description' => t('Enter quizlet list page title.'),
+  );
+  $form['quizlet_custom_search_description'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Quizlet search field description'),
+    '#required' => TRUE,
+    '#default_value' => variable_get('quizlet_custom_search_description', 'Enter keyword to search on quizlet.'),
+    '#description' => t('Enter quizlet search field description.'),
+  );
+  $form['quizlet_custom_search_breadcrumb'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Quizlet search breadcrumb title'),
+    '#required' => TRUE,
+    '#default_value' => variable_get('quizlet_custom_search_breadcrumb', 'Quizlet Saved Lists'),
+    '#description' => t('Enter quizlet search breadcrumb title.'),
+  );
   $form['#submit'][] = 'quizlet_api_form_submit';
   return system_settings_form($form);
 }
@@ -336,7 +364,7 @@ function quizlet_search_form($form, &$form_state, $page=1) {
     '#title' => t('Enter Keyword'),
     '#required' => TRUE,
     '#default_value' => !empty($form_state['storage']['keywords']) ? $form_state['storage']['keywords'] : '',
-    '#description' => t('Enter keyword to search on quizlet.'),
+    '#description' => t(variable_get('quizlet_custom_search_description', 'Enter keyword to search on quizlet.')),
     '#size' => ($page ? 60 : 25),
   );
   $form['has_images'] = array(
@@ -757,7 +785,7 @@ function quizlet_terms_save($id) {
 function quizlet_lists() {
   global $user;
   $total = 30;
-  drupal_set_title(t('Most Recently Saved Quizlet Vocabulary Lists'));
+  drupal_set_title(t(variable_get('quizlet_custom_list_title', 'Most Recently Saved Quizlet Vocabulary Lists')));
   $header = array(
     array('data' => t('Title'), 'field' => 'title'),
     array('data' => t('Created'), 'field' => 'created', 'sort' => 'desc'),
@@ -1083,4 +1111,47 @@ function quizlet_group_terms_save($id) {
     } 
     drupal_goto('node/' . $node->nid);  
   }
+}
+
+/**
+ * Search form widget called anywhere with below settings
+ * $settings = array(
+ *    'title' => "Textfield Label",
+ *    'description' => "Textfield description.",
+ *    'text_class' => "Textfield Class",
+ *    'field_title' => "Textfield title",
+ *    'button_value' => "Button text value",
+ *    'button_class' => "Button class",
+ *    'prefix' => "Html before form",
+ *    'suffix' => "Html after form"
+ *  );
+ */
+function quizlet_search_widget($settings = array()){
+  return drupal_render(drupal_get_form('quizlet_search_widget_form', $settings));	
+}
+
+/** 
+ * Quizlet widget serach form
+ */
+function quizlet_search_widget_form($form_state = array(), $args) {
+  $settings = $args['build_info']['args'][0];
+  $form['keywords'] = array(
+    '#type' => 'textfield',
+    '#title' => $settings['title'],
+    '#required' => TRUE,
+    '#description' => $settings['description'],
+    '#attributes' => array('class' => $settings['text_class'], 'title' => $settings['field_title']),
+    '#theme_wrappers' => FALSE,
+  );
+  $form['search'] = array(
+    '#type' => 'submit',
+    '#title' => $settings['button_value'] ? $settings['button_value'] : t('Search'),
+    '#value' => $settings['button_value'] ? $settings['button_value'] : t('Search'),
+    '#attributes' => array('class' => $settings['button_class']),
+  );
+  $form['#prefix'] = $settings['prefix'];
+  $form['#suffix'] = $settings['suffix'];
+  $form['#method'] = 'GET';
+  $form['#action'] = url(QUIZLET_PATH . '/search');
+  return $form;	
 }

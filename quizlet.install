@@ -8,7 +8,7 @@
  * Implements hook_enable().
  */
 function quizlet_enable() {
-  drupal_set_message(t('Please add your Quizlet API Developers Key at ' . l(t('Quizlet Settings'), 'admin/settings/quizlet')), 'warning');
+  drupal_set_message(t('Please add your Quizlet API Developers Key at ' . l(t('Quizlet Settings'), 'admin/config/services/quizlet')), 'warning');
 }
 /** 
  * Implements hook_uninstall(). 
