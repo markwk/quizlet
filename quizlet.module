@@ -911,10 +911,10 @@ function quizlet_api_token_form($form_state = array()) {
   $secretkey = variable_get('quizlet_secret_key', ''); 
   if (empty($clientid) || empty($secretkey)) {
     form_set_error('', 'Please enter client id and secret key first.'); 
-    drupal_goto('admin/settings/quizlet');
+    drupal_goto('admin/config/services/quizlet');
   }
   $accesstoken = variable_get('quizlet_access_token', '');
-  $siteurl = url('admin/settings/quizlet/token', array('absolute' => TRUE)); 
+  $siteurl = url('admin/config/services/quizlet/token', array('absolute' => TRUE)); 
   $authorizeUrl = "https://quizlet.com/authorize/?client_id={$clientid}&response_type=code&scope=read%20write_set";
   $tokenUrl = 'https://api.quizlet.com/oauth/token';
   if (empty($_GET['code']) && empty($_GET['error']) && empty($accesstoken)) {
