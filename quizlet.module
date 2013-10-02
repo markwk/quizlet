@@ -296,13 +296,13 @@ function quizlet_search_form($form_state = array(), $page=1) {
       $row[] = l(htmlspecialchars_decode($value['title'], ENT_QUOTES), 'quizlet/list/'. $value['id'], array('query' => 'keywords='. $form_state['storage']['keywords'] . $criteria));
       $row[] = $value['term_count'];  
       if (variable_get('quizlet_show_creator', '')) { 
-        $row[] = $value['creator'];
+        $row[] = $value['created_by'];
       }
       if (variable_get('quizlet_show_date_created', '')) { 
-        $row[] = date('m-d-Y H:i', $value['created']); 
+        $row[] = date('m-d-Y H:i', $value['created_date']); 
       } 
       if (variable_get('quizlet_show_last_modified', '')) {   
-        $row[] = date('m-d-Y H:i', $value['last_modified']);
+        $row[] = date('m-d-Y H:i', $value['modified_date']);
       }
       $nid = db_result(db_query("select nid from {quizlet_lists} where quizlet_id='%d'", $value['id']));       
       if (user_access('quizlet save', $user) && !variable_get('quizlet_multiple_copy', '')) { 
@@ -704,15 +704,15 @@ function quizlet_flashcards_access($node) {
 */
 function quizlet_terms_embeddedcards($node, $type) {
   if ($type=='learn') {
-    $url = 'http://quizlet.com/'. $node->quizlet_id .'/learn/embed/?hideLinks';  
+    $url = 'http://quizlet.com/'. $node->quizlet_id .'/learn/embedv2/?hideLinks';  
     $height = 480;
   }
   elseif ($type=='scatter')   {
-    $url = 'http://quizlet.com/'. $node->quizlet_id .'/scatter/embed/?hideLinks';  
+    $url = 'http://quizlet.com/'. $node->quizlet_id .'/scatter/embedv2/?hideLinks';  
     $height = 520; 
   }
   else {
-	  $url = 'http://quizlet.com/'. $node->quizlet_id .'/familiarize/embed/?hideLinks';  
+	  $url = 'http://quizlet.com/'. $node->quizlet_id .'/familiarize/embedv2/?hideLinks';  
     $height = 350;
   }
   return theme_render_template(drupal_get_path('module', 'quizlet') .'/templates/embedded_cards.tpl.php', array('url' => $url, 'height' => $height));
